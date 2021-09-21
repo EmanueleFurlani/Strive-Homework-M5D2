@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "_id": "i9i4dcl8ktn1eell",
+    "createdAt": "2021-09-16T14:37:23.433Z",
+    "name": "Claudia Erdman",
+    "surname": "Adventure",
+    "email": "right@email.com",
+    "birthDate": "03-09-1990",
+    "avatar": "http://localhost:3001/img/authors/1.jpg"
+  },
+  {
+    "_id": "i9i4dcl8ktn1egbf",
+    "createdAt": "2021-09-16T14:37:25.659Z",
+    "name": "Damon Carter",
+    "surname": "Adventure",
+    "email": "right@email.com",
+    "birthDate": "03-09-1990",
+    "avatar": "http://localhost:3001/img/authors/1.jpg"
+  },
+  {
+    "_id": "i9i4dc9sktn2qs6x",
+    "createdAt": "2021-09-16T15:15:00.537Z",
+    "name": "Donna Heaney",
+    "surname": "asd",
+    "email": "right@email.com",
+    "birthDate": "03-09-1990",
+    "avatar": "http://localhost:3001/img/authors/1.jpg"
+  },
+  {
+    "_id": "i9i4dbs8ktn0yrf7",
+    "createdAt": "2021-09-16T14:25:13.554Z",
+    "name": "Delores Kessler",
+    "surname": "asd",
+    "email": "right@email.com",
+    "birthDate": "03-09-1994",
+    "avatar": "http://localhost:3001/img/authors/1.jpg"
+  }
+]

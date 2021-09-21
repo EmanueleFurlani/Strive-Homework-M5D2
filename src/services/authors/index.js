@@ -1,106 +1,142 @@
-// ************************* AUTHORS CRUD ***************************
-// import {Router} from "express"
-import express from "express"
-import fs from "fs"
-import {dirname, join} from "path"
-import { fileURLToPath } from "url"
-import uniqid  from "uniqid"
-// import { request } from "http"
+import express from "express";
+import {readAuthors, writeAuthors,saveAvatarCloudinary} from "../../lib/tools.js";
+import uniqid from "uniqid";
+import createHttpError from "http-errors";
+import { validationResult } from "express-validator";
+import { authorsValidation } from "./validation.js";
+import multer from "multer";
 
-const authorsRouter = express.Router();
+const authorsRouter = express.Router(); // provide Routing
 
+// ***************** AUTHORS INFO ****************
 
-// road to obtain authorsJSONFilePath
-//1
-const currentFilePath = fileURLToPath(import.meta.url)
-//2
-const currentDirPath = dirname(currentFilePath)
-//3
-const authorsJSONFilePath = join(currentDirPath, "authors.json") // Here you have to change to find the right folder
+authorsRouter.get("/", async (req, res, next) => {
+  try {
+    const authors = await readAuthors();
 
-
-//1
-
-authorsRouter.post("/", (req, resp) =>{
-    console.log("request body", req.body)
-    // const {name, surname, email, dateOfBirth} = req.body
-    const newAuthor = {
-        ...req.body,
-        id: uniqid(),
-        // name,
-        // surname,
-        // email,
-        // dateOfBirth,
-        // avatar: `https://ui-avatars.com/api/?name=${name}+${surname}`,
-        createdAt: new Date(),
-        updateAt: new Date()
+    if (req.query && req.query.name) {
+      const filteredAuthors = authors.filter((author) =>
+        author.name
+          .toLowerCase()
+          .includes(req.query.name.toLowerCase())
+      );
+      res.send(filteredAuthors);
+    } else {
+      res.send(authors);
     }
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+});
 
-    const authors = JSON.parse(fs.readFileSync(authorsJSONFilePath))
-    authors.push(newAuthor)
-    fs.writeFileSync(authorsJSONFilePath, JSON.stringify(authors))
+authorsRouter.get("/:_id", async (req, res, next) => {
+  try {
+    const paramsId = req.params._id;
+    const authors = await readAuthors();
+    const author = authors.find((a) => a._id === paramsId);
+    if (author) {
+      res.send(author);
+    } else {
+      res.send(
+        createHttpError(404, `Author with the id: ${paramsId} not found.`)
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 
-    // const fileContent = fs.readFileSync(authorsJSONFilePath)
-    // const fileAsString = fileContent.toString()
-    // const fileAsJASON = JSON.parse(fileAsString)
-    // fileAsJASON.push(newAuthor)
-    // fs.writeFileSync(authorsJSONFilePath.JSON.stringify)
-    // console.log(newAuthor)
-    resp.status(201).send({  id: newAuthor.id })
-})
+authorsRouter.post("/", authorsValidation, async (req, res, next) => {
+  try {
+    const errorList = validationResult(req);
+    if (errorList.isEmpty()) {
+      const authors = await readAuthors();
+      const newAuthor = { _id: uniqid(), createdAt: new Date(), ...req.body };
 
-//2
+      authors.push(newAuthor);
+      await writeAuthors(authors);
 
-authorsRouter.get("/", (req, resp) =>{
+      res.status(201).send("OK");
+    } else {
+      next(createHttpError(400, { errorList }));
+    }
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+});
 
-    const fileContent = fs.readFileSync(authorsJSONFilePath)
-    const authors = JSON.parse(fileContent)
+authorsRouter.put("/:_id", authorsValidation, async (req, res, next) => {
+  try {
+    const paramsId = req.params._id;
+    const errorList = validationResult(req);
+    if (errorList.isEmpty()) {
+      const authors = await readAuthors();
+      const authorToUpdate = authors.find((a) => a._id === paramsId);
 
-    resp.send(authors)
-})
+      const updatedAuthor = { ...authorToUpdate, ...req.body };
 
-//3
+      const remainingAuthors = authors.filter((a) => a._id !== paramsId);
 
-authorsRouter.get("/:authorID", (req, resp) =>{
-    console.log("author id:", req.params.authorID)
-    const authors = JSON.parse(fs.readFileSync(authorsJSONFilePath))
-    const author = authors.find(a => a.id === req.params.authorID)
+      remainingAuthors.push(updatedAuthor);
+      await writeAuthors(remainingAuthors);
 
-    resp.send(author)
-})
+      res.send(updatedAuthor);
+    } else {
+      next(createHttpError(400, { errorList }));
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 
-//4
+authorsRouter.delete("/:_id", async (req, res, next) => {
+  try {
+    const paramsId = req.params._id;
+    const authors = await readAuthors();
+    const author = authors.find((a) => a._id === paramsId);
+    if (author) {
+      const remainingAuthors = authors.filter((a) => a._id !== paramsId);
 
-authorsRouter.put("/:authorID", (req, resp) =>{
-    // way 1
-    // const authors = JSON.parse(fs.readFileSync(authorsJSONFilePath))
-    // const remainingAuthors = authors.filter(a => a.id !== req.params.authorID)
-    // const updatedAuthors =  {...req.body, id: req.params.authorID}
-    // remainingAuthors.push(updatedAuthors)
-    // fs.writeFileSync(authorsJSONFilePath, JSON.stringify(remainingAuthors))
-    // resp.send(updatedAuthors)
+      await writeAuthors(remainingAuthors);
 
-    // way 2
-    const authors = JSON.parse(fs.readFileSync(authorsJSONFilePath))
-    const index = authors.findIndex(a => a.id === req.params.authorID)
-    const authorToModify = authors[index]
-    const updatedFields = req.body
-    const updatedAuthors = { ...authorToModify, ...updatedFields }
-    authors[index] = updatedAuthors
-    fs.writeFileSync(authorsJSONFilePath, JSON.stringify(authors))
-    resp.send(updatedAuthors)
+      res.status(204).send("DELETE IT");
+    } else {
+      next(
+        createHttpError(
+          404,
+          `The author with the id: ${paramsId} was not found`
+        )
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 
-})
+// *************** AUTHORS AVATAR ****************
 
-//5
-
-authorsRouter.delete("/:authorID", (req, resp) =>{
-    const authors = JSON.parse(fs.readFileSync(authorsJSONFilePath))
-    const remainingAuthors = authors.filter(a => a.id !== req.params.authorID)
-    fs.writeFileSync(authorsJSONFilePath, JSON.stringify(remainingAuthors)) 
-
-    resp.status(204).send("Hello im a delete resp")
-})
-
-
+authorsRouter.post("/:_id/uploadAvatar",multer({ storage: saveAvatarCloudinary }).single("avatar"), async (req, res, next) => {
+    try {
+      const paramsId = req.params._id;
+      const authors = await readAuthors();
+      const author = authors.find((a) => a._id === paramsId);
+      if (author) {
+        const avatarUrl = req.file.path;
+        const updatedAuthor = { ...author, avatar: avatarUrl };
+        const remainingAuthors = authors.filter((a) => a._id !== paramsId);
+        remainingAuthors.push(updatedAuthor);
+        await writeAuthors(remainingAuthors);
+        res.send(updatedAuthor);
+      } else {
+        next(
+          createHttpError(404, `Author with the id: ${paramsId} was not found.`)
+        );
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 export default authorsRouter
