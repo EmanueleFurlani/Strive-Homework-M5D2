@@ -10,9 +10,11 @@ import createHttpError from "http-errors";
 import { validationResult } from "express-validator";
 import { blogPostValidation, blogPostCommentValidation } from "./validation.js";
 import multer from "multer";
+import {pipeline} from "stream";
 import {
   getBlogPostPDFReadableStream,
 } from "../../lib/tools.js" 
+
 const blogPostsRouter = express.Router();
 
 // *********** BLOG POSTS INFO **********
