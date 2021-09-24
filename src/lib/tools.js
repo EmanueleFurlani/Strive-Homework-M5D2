@@ -8,7 +8,10 @@ const {
   readJSON,
   writeJSON,
   writeFile,
-  // remove,
+  readFile,
+  remove,
+  createReadStream,
+  createWriteStream,
 } = fs;
 
 const authorsJSONPath = join(
@@ -30,6 +33,7 @@ export const blogPostsFolderPath = join(
 
 // *************** AUTHORS ****************
 export const readAuthors = () => readJSON(authorsJSONPath);
+export const getAuthorsReadableStream = () => createReadStream(authorsJSONPath);
 export const writeAuthors = (content) => writeJSON(authorsJSONPath, content);
 
 // Avatars
@@ -60,3 +64,8 @@ export const saveCover = (fileName, content) =>
   writeFile(join(blogPostsFolderPath, fileName), content);
 // export const removeCover = (fileName) =>
 //   remove(join(blogPostsFolderPath, fileName)); // fs method
+
+// email
+export const writePDFStream = (path) => createWriteStream(path);
+export const readPDFFile = (path) => readFile(path);
+export const deletePDFFile = (path) => remove(path);

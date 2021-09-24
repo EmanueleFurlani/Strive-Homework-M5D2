@@ -1,10 +1,12 @@
 import express from "express";
-import {readAuthors, writeAuthors,saveAvatarCloudinary} from "../../lib/tools.js";
+import {readAuthors, writeAuthors, getAuthorsReadableStream, saveAvatarCloudinary} from "../../lib/tools.js";
 import uniqid from "uniqid";
 import createHttpError from "http-errors";
 import { validationResult } from "express-validator";
 import { authorsValidation } from "./validation.js";
 import multer from "multer";
+import json2csv from "json2csv"
+import { pipeline } from "stream";
 
 const authorsRouter = express.Router(); // provide Routing
 
@@ -139,4 +141,22 @@ authorsRouter.post("/:_id/uploadAvatar",multer({ storage: saveAvatarCloudinary }
     }
   }
 );
+
+// ************** Download CSV File **************
+authorsRouter.get("/download/CSV", async (req, res, next) => {
+  try {
+    res.setHeader("Content-Disposition", `attachment; filename=Authors.csv`);
+    const source = getAuthorsReadableStream();
+    const transform = new json2csv.Transform({
+      fields: ["_id", "name", "surname", "email", "birthDate", "avatar"],
+    });
+    const destination = res;
+    pipeline(source, transform, destination, (err) => {
+      if (err) next(err);
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default authorsRouter

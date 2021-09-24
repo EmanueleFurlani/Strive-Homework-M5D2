@@ -3,7 +3,8 @@ import {
   readBlogPosts,
   writeBlogPosts,
   readAuthors,
-  saveCoverCloudinary
+  saveCoverCloudinary,
+  deletePDFFile
 } from "../../lib/tools.js";
 import uniqid from "uniqid";
 import createHttpError from "http-errors";
@@ -12,8 +13,11 @@ import { blogPostValidation, blogPostCommentValidation } from "./validation.js";
 import multer from "multer";
 import {pipeline} from "stream";
 import {
-  getBlogPostPDFReadableStream
+  getBlogPostPDFReadableStream,
+  generateBlogPostPDFAsync
 } from "../../lib/pdfMakeTools.js" 
+import { sendEmail } from "../../lib/email.js";
+
 
 const blogPostsRouter = express.Router();
 
@@ -229,7 +233,7 @@ blogPostsRouter.post("/:_id/comments", blogPostCommentValidation, async (req, re
 );
 
 
-//*********blogpost pdf***********
+// ************** DOWNLOAD BLOG POST AS PDF *************
 blogPostsRouter.get("/:_id/downloadPDF", async (req, res, next) => {
   try {
     const paramsID = req.params._id;
@@ -238,7 +242,7 @@ blogPostsRouter.get("/:_id/downloadPDF", async (req, res, next) => {
     if (blogPost) {
       res.setHeader(
         "Content-Disposition",
-        "attachment; filename=blog-post1.pdf"
+        "attachment; filename=blog-post.pdf"
       ); // this enables to download the pdf
       const source = await getBlogPostPDFReadableStream(blogPost);
       const destination = res;
@@ -246,6 +250,27 @@ blogPostsRouter.get("/:_id/downloadPDF", async (req, res, next) => {
       pipeline(source, destination, (err) => {
         if (err) next(err);
       });
+    } else {
+      res.send(
+        createHttpError(404, `Blog post with the id: ${paramsID} not found.`)
+      );
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// *************** SEND PDF AS EMAIL *************
+blogPostsRouter.get("/:_id/sendEmail", async (req, res, next) => {
+  try {
+    const paramsID = req.params._id;
+    const blogPosts = await readBlogPosts();
+    const blogPost = blogPosts.find((p) => p._id === paramsID);
+    if (blogPost) {
+      // const blogPostPDFPath = await generateBlogPostPDFAsync(blogPost);
+      await sendEmail(blogPost); // ,blogPostPDFPath
+      // await deletePDFFile(blogPostPDFPath);
+      res.send("Email sent!");
     } else {
       res.send(
         createHttpError(404, `Blog post with the id: ${paramsID} not found.`)
